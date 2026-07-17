@@ -127,21 +127,14 @@ If you power the sensor from a separate external 5V supply instead of the USB-TT
 
 ## 5.1 Board Settings
 
-  ------------------------------------------------------------------------
-  **Setting**                         **Value**
-  ----------------------------------- ------------------------------------
-  Upload Speed                        115200
-
-  Flash Frequency                     40 MHz
-
-  Flash Mode                          DIO
-
-  Partition Scheme                    Huge APP (3MB No OTA / 1MB SPIFFS)
-
-  PSRAM                               Enabled
-
-  Core Debug Level                    None
-  ------------------------------------------------------------------------
+| **Setting** | **Value** |
+|-------------|-----------|
+| Upload Speed | 115200 |
+| Flash Frequency | 40 MHz |
+| Flash Mode | DIO |
+| Partition Scheme | Huge APP (3MB No OTA / 1MB SPIFFS) |
+| PSRAM | Enabled |
+| Core Debug Level | None |
 
 # 6. ESP32-CAM Code
 
