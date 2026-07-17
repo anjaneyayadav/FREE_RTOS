@@ -52,9 +52,7 @@ How it works, in order:
 
 > *Note: Do not power the ESP32-CAM from a Raspberry Pi or similar single-board computer\'s 5V pin. It usually cannot supply enough current for the camera, WiFi radio, and sensor running together, and will cause random crashes ("brownout" resets).*
 
-# ![Uploading image.png…]()
-
-
+#![Uploading image.png…]() 
 
 # 4. Connections
 
