@@ -1,462 +1,283 @@
-# ESP32-CAM Motion-Triggered Wi-Fi Security Camera
+**ESP32-CAM Motion-Triggered Wi-Fi Security Camera**
 
-*A Complete Beginner's Build Guide*
-
----
+*A Complete Beginner\'s Build Guide*
 
 # 1. Project Objective
 
-Design and build a low-cost, motion-triggered Wi-Fi camera system using an **ESP32-CAM** and an **HC-SR04 ultrasonic sensor**.
+To design and build a low-cost, motion-triggered Wi-Fi camera system using an ESP32-CAM and an ultrasonic sensor, which automatically detects nearby motion, streams live video to a computer over Wi-Fi, and saves each detected event as a video clip --- without needing continuous recording or constant human monitoring.
 
-The system automatically:
+Specific goals:
 
-- Detects nearby motion
-- Streams live video over Wi-Fi
-- Saves each motion event as a video clip
-- Eliminates the need for continuous recording
+-   Detect motion reliably using an ultrasonic distance sensor, rather than relying on continuous video analysis.
 
-## Goals
+-   Conserve power and bandwidth by activating the camera and Wi-Fi streaming only when motion is detected.
 
-- Detect motion using an ultrasonic sensor.
-- Activate Wi-Fi and camera only when motion is detected.
-- Stream live video to a PC.
-- Save each event as an MP4 video.
-- Use inexpensive, readily available hardware.
+-   Stream live video wirelessly from the ESP32-CAM to a PC in real time.
 
----
+-   Automatically save each motion event as a timestamped video clip.
 
-# 2. What You're Building
+-   Use only low-cost, easily available hardware --- no proprietary security camera hardware or cloud subscriptions.
 
-This project creates a Wi-Fi security camera.
+# 2. What You\'re Building
 
-Workflow:
+This project builds a small Wi-Fi security camera. An ultrasonic distance sensor watches for something coming close. When it does, the ESP32-CAM automatically wakes up its camera and streams live video over Wi-Fi to a program running on your PC, which displays the video on screen and saves each event as a video clip.
 
-1. HC-SR04 continuously measures distance.
-2. Object detected within **100 cm**.
-3. ESP32-CAM connects to Wi-Fi.
-4. Camera starts streaming.
-5. Python program receives video.
-6. Video is displayed live.
-7. Video is saved as an MP4 clip.
-8. If no motion is detected for 5 seconds, streaming stops automatically.
+How it works, in order:
 
----
+-   The ultrasonic sensor (HC-SR04) continuously measures distance.
 
-# 3. Required Hardware
+-   When an object comes within 100 cm, the ESP32-CAM treats this as "motion detected."
 
-| Component | Quantity |
-|-----------|----------|
-| AI Thinker ESP32-CAM | 1 |
-| HC-SR04 Ultrasonic Sensor | 1 |
-| USB-to-TTL Adapter (FTDI/CP2102/CH340) | 1 |
-| Jumper Wires | Several |
-| Breadboard | 1 |
-| 5V Power Supply | 1 |
-| Windows PC | 1 |
+-   The ESP32-CAM connects to your PC over WiFi and starts sending live camera frames.
 
-> **Important**
->
-> Both the PC and ESP32-CAM must be connected to the same Wi-Fi network.
+-   A Python program on your PC receives those frames, shows them in a live window, and saves them as an .mp4 clip.
 
-> **Warning**
->
-> Do **not** power the ESP32-CAM from a Raspberry Pi 5V pin.
-> Use a stable external 5V supply or the USB-TTL adapter.
+-   When nothing is detected for 5 seconds, the ESP32-CAM stops streaming and disconnects until the next motion event.
 
----
+# 3. **Required Hardware Components**
+
+-   AI Thinker ESP32-CAM board
+
+-   HC-SR04 ultrasonic distance sensor
+
+-   USB-to-TTL (FTDI / CP2102 / CH340) adapter, for programming and power
+
+-   Jumper wires
+
+-   Breadboard
+
+-   A PC with Arduino IDE and Python installed
+
+-   Both the ESP32-CAM and the PC must be on the same Wi-Fi network
+
+> *Note: Do not power the ESP32-CAM from a Raspberry Pi or similar single-board computer\'s 5V pin. It usually cannot supply enough current for the camera, WiFi radio, and sensor running together, and will cause random crashes ("brownout" resets).*
+
+# ![](media/image1.png){width="6.5in" height="4.333333333333333in"}
 
 # 4. Connections
 
-## HC-SR04 → ESP32-CAM
+## 4.1 HC-SR04 to ESP32-CAM
 
-| HC-SR04 | ESP32-CAM |
-|----------|-----------|
-| VCC | 5V |
-| GND | GND |
-| TRIG | GPIO14 |
-| ECHO | GPIO13 |
+  -----------------------------------------------------------------------
+  **HC-SR04 Pin**                     **ESP32-CAM Pin**
+  ----------------------------------- -----------------------------------
+  VCC                                 5V
 
-> Never use **GPIO16** for the ultrasonic sensor.
->
-> GPIO16 is reserved for the ESP32-CAM PSRAM.
+  GND                                 GND
 
----
+  TRIG                                GPIO14
 
-## USB-TTL → ESP32-CAM
+  ECHO                                GPIO13
+  -----------------------------------------------------------------------
 
-| USB-TTL | ESP32-CAM |
-|----------|-----------|
-| 5V | Leave Disconnected |
-| GND | GND |
-| TX | U0R (RX) |
-| RX | U0T (TX) |
+> *Note: GPIO14 and GPIO13 are used deliberately. GPIO16 must never be used for the sensor on this board --- it is internally used by the camera\'s PSRAM chip, and reconfiguring it as a sensor pin corrupts memory and crashes the board the moment the camera and WiFi are both active.*
 
-Use the adapter's **5V output**, not **3.3V**.
+## 
 
----
+## 4.2 USB-TTL Adapter to ESP32-CAM (power + programming)
 
-## Flash Mode
+  -----------------------------------------------------------------------
+  **USB-TTL Pin**                     **ESP32-CAM Pin**
+  ----------------------------------- -----------------------------------
+  5V                                  Don't connect 5V, Leave this Pin
 
-During code upload:
+  GND                                 GND
 
-GPIO0 → GND
+  TX                                  U0R (RX)
 
-After upload:
+  RX                                  U0T (TX)
+  -----------------------------------------------------------------------
 
-Disconnect GPIO0 from GND.
+> *Note: Use the USB-TTL adapter\'s 5V pin, not its 3.3V pin. Do not use its 3.3V line --- the ESP32-CAM needs true 5V on its 5V pin.*
 
----
+## 4.3 Flashing Mode Jumper (only while uploading code)
 
-## Common Ground
+Connect GPIO0 to GND only while uploading new code. Remove this wire immediately after uploading finishes --- leaving it connected will prevent the board from running normally.
 
-If using an external power supply, connect all grounds together.
+## 4.4 Common Ground 
 
-- ESP32-CAM GND
-- HC-SR04 GND
-- USB-TTL GND
-- External Power Supply GND
+If you power the sensor from a separate external 5V supply instead of the USB-TTL adapter, make sure every ground (GND) in the circuit is tied together, otherwise readings and connections will be unreliable:
 
----
+-   ESP32-CAM GND
 
-## Common 5V Supply
+-   HC-SR04 GND
 
-Connect 5V to:
+-   External power supply GND
 
-- ESP32-CAM
-- HC-SR04
-- External Power Supply
+-   USB-TTL adapter GND
 
----
+## 4.4 Common Power supply (5V)
+
+-   ESP32-CAM 5V
+
+-   HC-SR04 5V
+
+-   External power supply 5V
+
 # 5. Arduino IDE Setup
 
-## Step 1: Install Arduino IDE
+1.  Install Arduino IDE 2.x from the official site: [arduino.cc/en/software.](https://www.arduino.cc/en/software)
 
-Download and install the latest Arduino IDE 2.x.
+2.  Go to File → Preferences, and under "Additional Boards Manager URLs" add:
 
----
+> [**https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json**](https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json)
 
-## Step 2: Add ESP32 Board Manager URL
+3.  Go to Tools → Board → Boards Manager, search "esp32", and install esp32 by Espressif Systems, version 2.0.11 (newer 3.x versions have known Wi-Fi stability bugs on this board).
 
-Open:
+4.  Select Tools → Board → ESP32 Arduino → AI Thinker ESP32-CAM.
 
-**File → Preferences**
+5.  Set the remaining board options as shown below.
 
-In **Additional Boards Manager URLs**, add:
+6.  Set Tools → Port to the COM port your USB-TTL adapter shows up as.
 
-```text
-https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-```
+## 
 
-Click **OK**.
+## 
 
----
+## 5.1 Board Settings
 
-## Step 3: Install ESP32 Board Package
+  ------------------------------------------------------------------------
+  **Setting**                         **Value**
+  ----------------------------------- ------------------------------------
+  Upload Speed                        115200
 
-Go to:
+  Flash Frequency                     40 MHz
 
-```
-Tools → Board → Boards Manager
-```
+  Flash Mode                          DIO
 
-Search for:
+  Partition Scheme                    Huge APP (3MB No OTA / 1MB SPIFFS)
 
-```
-esp32
-```
+  PSRAM                               Enabled
 
-Install:
-
-```
-esp32 by Espressif Systems
-Version: 2.0.11
-```
-
-> **Note**
->
-> Avoid version **3.x**, as it has known Wi-Fi stability issues on the AI Thinker ESP32-CAM.
-
----
-
-## Step 4: Select the Board
-
-Go to:
-
-```
-Tools → Board → ESP32 Arduino
-```
-
-Select:
-
-```
-AI Thinker ESP32-CAM
-```
-
----
-
-## Step 5: Configure Board Settings
-
-| Setting | Value |
-|----------|-------|
-| Upload Speed | 115200 |
-| Flash Frequency | 40 MHz |
-| Flash Mode | DIO |
-| Partition Scheme | Huge APP (3MB No OTA / 1MB SPIFFS) |
-| PSRAM | Enabled |
-| Core Debug Level | None |
-
----
-
-## Step 6: Select COM Port
-
-Go to:
-
-```
-Tools → Port
-```
-
-Select the COM port corresponding to your USB-to-TTL adapter.
-
----
+  Core Debug Level                    None
+  ------------------------------------------------------------------------
 
 # 6. ESP32-CAM Code
 
-Create a new Arduino sketch and paste the following code.
+Create a new sketch in Arduino IDE and paste in the following code. Before uploading, update these three lines to match your own network (see Section 8 for how to find these values):
 
-Before uploading, update these values:
+-   ssid and password --- your Wi-Fi network name and password
 
-```cpp
-const char* ssid = "YOUR_WIFI_NAME";
-const char* password = "YOUR_WIFI_PASSWORD";
+-   PC_IP --- your PC\'s current IP address
 
-const char* PC_IP = "YOUR_PC_IP";
+-   local_IP and gateway --- a free static IP for the ESP32-CAM, and your network\'s gateway address
 
-IPAddress local_IP(...);
-IPAddress gateway(...);
-```
+*(Arduino code omitted)*
 
-Replace them with:
+# 7. Flashing the Code
 
-- Your Wi-Fi Name
-- Your Wi-Fi Password
-- Your PC's IPv4 Address
-- Gateway Address
-- Static IP for ESP32-CAM
+1.  Disconnect the HC-SR04 sensor completely before flashing.
 
----
+2.  Connect GPIO0 to GND (flashing mode).
 
-## Required Libraries
+3.  Power off the board, then click Upload in Arduino IDE.
 
-```cpp
-#include "esp_camera.h"
-#include <WiFi.h>
-#include "nvs_flash.h"
-#include "camera_pins.h"
-```
+4.  When the IDE shows "Connecting\...", power the board back on.
 
----
+![](media/image2.png){width="6.268055555555556in" height="1.2666666666666666in"}
 
-## Camera Model
+5.  Wait for the upload to finish successfully.
 
-```cpp
-#define CAMERA_MODEL_AI_THINKER
-```
+![](media/image3.png){width="6.268055555555556in" height="1.7194444444444446in"}
 
----
+6.  Remove the GPIO0-to-GND wire.
 
-## Wi-Fi Configuration
+7.  Open the Serial Monitor.
 
-```cpp
-const char* ssid = "YOUR_WIFI_NAME";
-const char* password = "YOUR_WIFI_PASSWORD";
+8.  Set the baud rate to "115200".
 
-const char* PC_IP = "10.189.70.10";
-const int PC_PORT = 9000;
-```
+9.  Power cycle the board (unplug and re-plug power).
 
----
+10. The Serial Monitor will begin displaying the boot messages and program logs.
 
-## Static IP Configuration
+![](media/image4.png){width="6.270049212598425in" height="1.5206430446194226in"}
 
-```cpp
-IPAddress local_IP(10,189,70,50);
-IPAddress gateway(10,189,70,227);
-IPAddress subnet(255,255,255,0);
-```
+11. Reconnect the HC-SR04 sensor now that flashing is complete.
 
----
+# 8. Finding Your Network Settings
 
-## Ultrasonic Sensor Pins
+On your PC (Windows), open Command Prompt and run:
 
-```cpp
-#define TRIG_PIN 14
-#define ECHO_PIN 13
+ipconfig /all
 
-#define DISTANCE_THRESHOLD_CM 100
-```
+Look under your active WiFi adapter for these three values:
 
----
+-   IPv4 Address --- this is your PC\'s IP. Use it as PC_IP in the ESP32 code.
 
-## Global Variables
+-   Default Gateway --- use this as the gateway value in the ESP32 code.
 
-```cpp
-bool motionDetected = false;
+-   Subnet Mask --- normally 255.255.255.0, matches the subnet value already in the code.
 
-unsigned long lastMotionTime = 0;
+For local_IP, pick any unused address on the same subnet as your PC (for example, if your PC is 10.189.70.10, you can use 10.189.70.50 for the ESP32-CAM).
 
-WiFiClient client;
-```
+> *Note: If you ever reconnect to Wi-Fi and the connection stops working, your PC\'s IP address may have changed. Re-run ipconfig /all, and update PC_IP, local_IP, and gateway in the ESP32 code to match, then re-upload.*
 
----
+# 8. Python Receiver (PC side) 
 
-## Distance Measurement Function
+Install the required Python packages once, from Command Prompt:
 
-The HC-SR04 measures the distance continuously.
+pip install opencv-python numpy
 
-```cpp
-float getDistance()
-{
-    digitalWrite(TRIG_PIN, LOW);
-    delayMicroseconds(2);
+Create a file named receiver.py and paste in the following code:
 
-    digitalWrite(TRIG_PIN, HIGH);
-    delayMicroseconds(10);
+*(Python code omitted)*
 
-    digitalWrite(TRIG_PIN, LOW);
+To run it, open Command Prompt in the folder containing this file and run:
 
-    long duration = pulseIn(ECHO_PIN, HIGH, 30000);
+python receiver.py
 
-    if(duration == 0)
-        return 999;
+It will print "Waiting for ESP32-CAM to connect\..." and wait. Saved video clips will appear automatically in a folder named clips, created next to the script.
 
-    return (duration * 0.034) / 2.0;
-}
-```
+# 10. Running the Full System
 
----
+1.  On your PC, run: python receiver.py, and leave it running.
 
-## setup()
+2.  Power on the ESP32-CAM (with the sensor connected).
 
-The `setup()` function performs the following tasks:
+3.  Open Arduino IDE\'s Serial Monitor at 115200 baud to watch its status.
 
-- Starts Serial Monitor
-- Initializes Camera
-- Initializes NVS Flash
-- Configures Sensor Pins
-- Sets Static IP
-- Connects to Wi-Fi
-- Prints ESP32 IP Address
+4.  Wait for Serial Monitor to show Wi-Fi connected! and an IP address.
 
-```cpp
-void setup()
-{
-    Serial.begin(115200);
+5.  Wave your hand within about 100 cm of the HC-SR04 sensor.
 
-    // Camera Initialization
+6.  Serial Monitor should show "Motion detected! Starting stream\..." and "Connected to PC!"
 
-    // NVS Initialization
+7.  A window titled "ESP32-CAM Motion Stream" should appear on your PC showing live video.
 
-    // Configure GPIO
+8.  After you move away and 5 seconds pass with no motion, streaming stops automatically and the clip is saved.
 
-    // Configure Static IP
+9.  Press q with the video window focused, or Ctrl+C in the terminal, to stop the receiver program safely.
 
-    // Connect Wi-Fi
+# 11. Troubleshooting Guide
 
-    // Print ESP32 IP
-}
-```
-
----
-
-## loop()
-
-The loop continuously:
-
-1. Reads distance from HC-SR04
-2. Detects motion
-3. Starts streaming
-4. Sends JPEG frames
-5. Stops streaming after 5 seconds of no motion
-
-Workflow:
-
-```text
-Measure Distance
-        │
-        ▼
-Distance < 100 cm?
-        │
-   Yes──┴──No
-        │
-Start Streaming
-        │
-Capture JPEG
-        │
-Send Frame to PC
-        │
-Repeat
-        │
-No Motion for 5 sec
-        │
-Stop Streaming
-```
-
----
-
-## Frame Transmission
-
-Each frame is transmitted as:
-
-```
-4 Bytes
-(Frame Length)
-
-↓
-
-JPEG Image Bytes
-```
-
-The Python receiver first reads the frame length and then receives the JPEG image.
-
----
-
-## Motion Detection Logic
-
-```cpp
-if(distance < DISTANCE_THRESHOLD_CM)
-{
-    motionDetected = true;
-}
-else
-{
-    if(no motion for 5 seconds)
-    {
-        Stop Streaming;
-    }
-}
-```
-
----
-
-## Streaming Process
-
-```text
-Motion Detected
-       │
-       ▼
-Connect to Wi-Fi
-       │
-       ▼
-Connect to PC
-       │
-       ▼
-Capture Camera Frame
-       │
-       ▼
-Send Frame
-       │
-       ▼
-Repeat Until No Motion
-```
-
----
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| **Symptom**                                                                            | **Likely Cause**                                                                        | **Fix**                                                                                         |
++========================================================================================+=========================================================================================+=================================================================================================+
+| Board keeps rebooting / crashes right after boot                                       | Wrong GPIO used for the sensor, or camera initialized before power stabilized           | Use GPIO14 for TRIG (never GPIO16), and make sure the camera init code runs early and cleanly   |
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| "Guru Meditation Error" right when Wi-Fi starts                                        | Wi-Fi\'s internal storage (NVS) is missing or corrupted, often after a flash erase      | Make sure the nvs_flash_init() block is present near the top of setup ()                        |
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| Crash only happens when camera + Wi-Fi + sensor all run together, but each works alone | GPIO16 is used internally by the camera\'s PSRAM chip and conflicts with sensor use     | Move the sensor\'s TRIG wire to GPIO14 instead of GPIO16                                        |
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| Wi-Fi shows "connected" but IP address is 0.0.0.0                                      | The Wi-Fi network\'s DHCP server isn\'t assigning an address (common on phone hotspots) | Assign a static IP in code using                                                                |
+|                                                                                        |                                                                                         |                                                                                                 |
+|                                                                                        |                                                                                         | Wi-Fi. Config (), instead of relying on DHCP                                                    |
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| "Brownout detector was triggered" when the sensor is connected                         | Not enough stable power for                                                             | Power the ESP32-CAM and sensor from the USB-TTL adapter\'s 5V line instead                      |
+|                                                                                        |                                                                                         |                                                                                                 |
+|                                                                                        | camera + Wi-Fi + sensor together, often from a shared board like a Raspberry Pi         |                                                                                                 |
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| "Connection failed, retrying\..." when trying to stream                                | The PC\'s IP address changed, or receiver.py isn\'t running                             | Re-check ipconfig on the PC, update PC_IP in the ESP32 code, and confirm receiver.py is running |
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+| Saved video clip won\'t open / play                                                    | The Python script was force-closed before it could finalize the file                    | Always stop the script with q or Ctrl+C so the video file gets closed properly                  |
++----------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------+-------------------------------------------------------------------------------------------------+
+
+# 12. Tips for Going Further
+
+-   Improve image quality by lowering jpeg_quality in the ESP32 code (lower number = higher quality, range 0--63).
+
+-   Adjust the FPS value in receiver.py if saved clips look sped up or slowed down compared to real time.
+
+-   Change DISTANCE_THRESHOLD_CM in the ESP32 code to make the sensor more or less sensitive to distance.
+
+-   Consider giving your PC a static IP on your router/hotspot, so PC_IP in the ESP32 code never needs updating again.
