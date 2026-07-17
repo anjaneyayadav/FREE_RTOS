@@ -57,19 +57,14 @@ How it works, in order:
 
 # 4. Connections
 
-## 4.1 HC-SR04 to ESP32-CAM
+## 4.2 USB-TTL Adapter to ESP32-CAM (Power + Programming)
 
-  -----------------------------------------------------------------------
-  **HC-SR04 Pin**                     **ESP32-CAM Pin**
-  ----------------------------------- -----------------------------------
-  VCC                                 5V
-
-  GND                                 GND
-
-  TRIG                                GPIO14
-
-  ECHO                                GPIO13
-  -----------------------------------------------------------------------
+| USB-TTL Pin | ESP32-CAM Pin |
+|-------------|---------------|
+| 5V | Don't connect 5V (Leave this pin unconnected) |
+| GND | GND |
+| TX | U0R (RX) |
+| RX | U0T (TX) |
 
 > *Note: GPIO14 and GPIO13 are used deliberately. GPIO16 must never be used for the sensor on this board --- it is internally used by the camera\'s PSRAM chip, and reconfiguring it as a sensor pin corrupts memory and crashes the board the moment the camera and WiFi are both active.*
 
